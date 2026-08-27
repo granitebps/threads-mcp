@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 	"time"
@@ -75,13 +76,38 @@ func TestStartupWritesNoNonProtocolOutputToStdout(t *testing.T) {
 	}
 }
 
+func TestExecutableName(t *testing.T) {
+	tests := []struct {
+		goos string
+		want string
+	}{
+		{goos: "windows", want: "threads-mcp.exe"},
+		{goos: "linux", want: "threads-mcp"},
+		{goos: "darwin", want: "threads-mcp"},
+	}
+	for _, test := range tests {
+		t.Run(test.goos, func(t *testing.T) {
+			if got := executableName(test.goos); got != test.want {
+				t.Fatalf("executableName(%q) = %q, want %q", test.goos, got, test.want)
+			}
+		})
+	}
+}
+
 func buildBinary(t *testing.T) string {
 	t.Helper()
-	binary := filepath.Join(t.TempDir(), "threads-mcp")
+	binary := filepath.Join(t.TempDir(), executableName(runtime.GOOS))
 	command := exec.Command("go", "build", "-o", binary, "./cmd/threads-mcp")
 	command.Dir = ".."
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, output)
 	}
 	return binary
+}
+
+func executableName(goos string) string {
+	if goos == "windows" {
+		return "threads-mcp.exe"
+	}
+	return "threads-mcp"
 }
