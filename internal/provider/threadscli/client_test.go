@@ -49,6 +49,22 @@ func TestClientSearchPostsPreservesPartialResults(t *testing.T) {
 	}
 }
 
+func TestClientSearchPostsRetriesIncompleteCrawlerResponses(t *testing.T) {
+	attempts := 0
+	client := testClient(&fakeSource{}, fakeSearchSource{searchFn: func(context.Context, string, int) iter.Seq2[threads.SearchResult, error] {
+		attempts++
+		if attempts < 3 {
+			return sequence[threads.SearchResult](nil, &threads.CodeError{Code: threads.ExitNotFound, Msg: "Threads public search page changed", Err: errSearchPageChanged})
+		}
+		return sequence([]threads.SearchResult{{ID: "1", Text: "result"}}, nil)
+	}})
+
+	page, err := client.SearchPosts(context.Background(), "query", 1)
+	if err != nil || page.ReturnedCount != 1 || attempts != 3 {
+		t.Fatalf("page=%+v err=%v attempts=%d", page, err, attempts)
+	}
+}
+
 func TestClientSearchPostsReturnsSafeErrorBeforeResults(t *testing.T) {
 	client := testClient(&fakeSource{}, fakeSearchSource{searchFn: func(context.Context, string, int) iter.Seq2[threads.SearchResult, error] {
 		return sequence[threads.SearchResult](nil, &threads.CodeError{Code: threads.ExitNotFound, Msg: "raw detail", Err: errSearchPageChanged})
@@ -83,6 +99,98 @@ func TestClientGetProfileNormalizesUsername(t *testing.T) {
 	profile, err := client.GetProfile(context.Background(), "@zuck")
 	if err != nil || got != "zuck" || profile.Username != "zuck" {
 		t.Fatalf("profile=%+v err=%v input=%q", profile, err, got)
+	}
+}
+
+func TestClientGetProfileRetriesIncompleteCrawlerResponses(t *testing.T) {
+	attempts := 0
+	source := &fakeSource{profileFn: func(_ context.Context, username string) (*threads.Profile, error) {
+		attempts++
+		if attempts < 3 {
+			return nil, &threads.CodeError{Code: threads.ExitNotFound, Msg: "not found: profile @" + username}
+		}
+		return &threads.Profile{ID: "1", Username: username}, nil
+	}}
+
+	profile, err := testClient(source, fakeSearchSource{}).GetProfile(context.Background(), "zuck")
+	if err != nil || profile.ID != "1" || attempts != 3 {
+		t.Fatalf("profile=%+v err=%v attempts=%d", profile, err, attempts)
+	}
+}
+
+func TestClientGetProfileReportsIncompleteCrawlerResponsesAsRetryable(t *testing.T) {
+	attempts := 0
+	source := &fakeSource{profileFn: func(_ context.Context, username string) (*threads.Profile, error) {
+		attempts++
+		return nil, &threads.CodeError{Code: threads.ExitNotFound, Msg: "not found: profile @" + username}
+	}}
+
+	_, err := testClient(source, fakeSearchSource{}).GetProfile(context.Background(), "zuck")
+	var providerErr *domain.ProviderError
+	if !errors.As(err, &providerErr) || providerErr.Code != domain.CodeUpstreamChanged || !providerErr.Retryable || attempts != 5 {
+		t.Fatalf("error=%+v attempts=%d", err, attempts)
+	}
+}
+
+func TestClientGetProfileDoesNotRetryRealNotFound(t *testing.T) {
+	attempts := 0
+	source := &fakeSource{profileFn: func(context.Context, string) (*threads.Profile, error) {
+		attempts++
+		return nil, &threads.CodeError{Code: threads.ExitNotFound, Msg: "not found: https://www.threads.com/@missing"}
+	}}
+
+	_, err := testClient(source, fakeSearchSource{}).GetProfile(context.Background(), "missing")
+	var providerErr *domain.ProviderError
+	if !errors.As(err, &providerErr) || providerErr.Code != domain.CodeNotFound || attempts != 1 {
+		t.Fatalf("error=%+v attempts=%d", err, attempts)
+	}
+}
+
+func TestClientGetPostRetriesIncompleteCrawlerResponses(t *testing.T) {
+	attempts := 0
+	source := &fakeSource{postFn: func(_ context.Context, postURL string) (*threads.Post, error) {
+		attempts++
+		if attempts < 3 {
+			return nil, &threads.CodeError{Code: threads.ExitNotFound, Msg: "not found: post " + postURL}
+		}
+		return &threads.Post{ID: "1", Permalink: postURL}, nil
+	}}
+
+	post, err := testClient(source, fakeSearchSource{}).GetPost(context.Background(), "https://www.threads.com/@zuck/post/ABC123")
+	if err != nil || post.ID != "1" || attempts != 3 {
+		t.Fatalf("post=%+v err=%v attempts=%d", post, err, attempts)
+	}
+}
+
+func TestClientGetProfilePostsRetriesEmptyCrawlerResponses(t *testing.T) {
+	attempts := 0
+	source := &fakeSource{profilePostsFn: func(context.Context, string, int) iter.Seq2[threads.Post, error] {
+		attempts++
+		if attempts < 3 {
+			return sequence[threads.Post](nil, nil)
+		}
+		return sequence([]threads.Post{{ID: "1", Permalink: "https://www.threads.com/@zuck/post/ABC123"}}, nil)
+	}}
+
+	page, err := testClient(source, fakeSearchSource{}).GetProfilePosts(context.Background(), "zuck", 1)
+	if err != nil || page.ReturnedCount != 1 || attempts != 3 {
+		t.Fatalf("page=%+v err=%v attempts=%d", page, err, attempts)
+	}
+}
+
+func TestClientGetPostRepliesRetriesIncompleteCrawlerResponses(t *testing.T) {
+	attempts := 0
+	source := &fakeSource{postRepliesFn: func(_ context.Context, postURL string, _ int) iter.Seq2[threads.Reply, error] {
+		attempts++
+		if attempts < 3 {
+			return sequence[threads.Reply](nil, &threads.CodeError{Code: threads.ExitNotFound, Msg: "not found: post " + postURL})
+		}
+		return sequence([]threads.Reply{{ID: "1"}}, nil)
+	}}
+
+	page, err := testClient(source, fakeSearchSource{}).GetPostReplies(context.Background(), "https://www.threads.com/@zuck/post/ABC123", 1)
+	if err != nil || page.ReturnedCount != 1 || attempts != 3 {
+		t.Fatalf("page=%+v err=%v attempts=%d", page, err, attempts)
 	}
 }
 
@@ -126,6 +234,23 @@ func TestNewIgnoresCredentialEnvironment(t *testing.T) {
 	}
 	if client.Info().Mode != "anonymous-crawler" {
 		t.Fatalf("mode=%q", client.Info().Mode)
+	}
+}
+
+func TestNewDisablesUpstreamCacheForFreshRetries(t *testing.T) {
+	cfg, err := config.Load("test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.CacheDir = t.TempDir()
+	client, err := New(cfg, "v0.1.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	upstream := client.source.(*threads.Client)
+	upstream.Cache().Put("https://www.threads.com/@zuck", []byte("incomplete response"))
+	if _, ok := upstream.Cache().Get("https://www.threads.com/@zuck"); ok {
+		t.Fatal("upstream cache is enabled; retries can reuse an incomplete response")
 	}
 }
 

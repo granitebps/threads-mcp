@@ -16,34 +16,52 @@ import (
 )
 
 func TestStdioHandshakeAndTools(t *testing.T) {
-	binary := buildBinary(t)
-	var stderr bytes.Buffer
-	command := exec.Command(binary)
-	command.Stderr = &stderr
-	client := mcp.NewClient(&mcp.Implementation{Name: "stdio-test", Version: "test"}, nil)
-	session, err := client.Connect(context.Background(), &mcp.CommandTransport{Command: command, TerminateDuration: time.Second}, nil)
-	if err != nil {
-		t.Fatalf("connect: %v stderr=%s", err, stderr.String())
-	}
-	listed, err := session.ListTools(context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var names []string
-	for _, tool := range listed.Tools {
-		names = append(names, tool.Name)
-	}
-	slices.Sort(names)
-	want := []string{"get_post", "get_post_replies", "get_profile", "get_profile_posts", "get_server_info", "search_posts"}
-	if !slices.Equal(names, want) {
-		t.Fatalf("tools=%v want=%v", names, want)
-	}
-	info, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_server_info", Arguments: map[string]any{}})
-	if err != nil || info.IsError || info.StructuredContent == nil {
-		t.Fatalf("info=%+v err=%v", info, err)
-	}
-	if err := session.Close(); err != nil {
-		t.Fatalf("close: %v stderr=%s", err, stderr.String())
+	for _, test := range []struct {
+		name, version string
+		flags         []string
+	}{
+		{name: "local", version: "dev"},
+		{name: "release flags", version: "1.0.0", flags: []string{"-ldflags", "-X github.com/granitebps/threads-mcp/internal/version.Version=1.0.0 -X github.com/granitebps/threads-mcp/internal/version.Commit=release-sha -X github.com/granitebps/threads-mcp/internal/version.Date=release-date"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			binary := buildBinary(t, test.flags...)
+			var stderr bytes.Buffer
+			command := exec.Command(binary)
+			command.Stderr = &stderr
+			client := mcp.NewClient(&mcp.Implementation{Name: "stdio-test", Version: "test"}, nil)
+			session, err := client.Connect(context.Background(), &mcp.CommandTransport{Command: command, TerminateDuration: time.Second}, nil)
+			if err != nil {
+				t.Fatalf("connect: %v stderr=%s", err, stderr.String())
+			}
+			t.Cleanup(func() { _ = session.Close() })
+			listed, err := session.ListTools(context.Background(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var names []string
+			for _, tool := range listed.Tools {
+				names = append(names, tool.Name)
+			}
+			slices.Sort(names)
+			want := []string{"get_post", "get_post_replies", "get_profile", "get_profile_posts", "get_server_info", "search_posts"}
+			if !slices.Equal(names, want) {
+				t.Fatalf("tools=%v want=%v", names, want)
+			}
+			info, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_server_info", Arguments: map[string]any{}})
+			if err != nil || info == nil || info.IsError || info.StructuredContent == nil {
+				t.Fatalf("info=%+v err=%v", info, err)
+			}
+			metadata := info.StructuredContent.(map[string]any)
+			if metadata["server_version"] != test.version || metadata["provider_version"] != "v0.1.1" {
+				t.Fatalf("incorrect build versions: %+v", metadata)
+			}
+			if test.version != "dev" && (metadata["commit"] != "release-sha" || metadata["build_date"] != "release-date") {
+				t.Fatalf("release flags were not preserved: %+v", metadata)
+			}
+			if err := session.Close(); err != nil {
+				t.Fatalf("close: %v stderr=%s", err, stderr.String())
+			}
+		})
 	}
 }
 
@@ -94,10 +112,12 @@ func TestExecutableName(t *testing.T) {
 	}
 }
 
-func buildBinary(t *testing.T) string {
+func buildBinary(t *testing.T, flags ...string) string {
 	t.Helper()
 	binary := filepath.Join(t.TempDir(), executableName(runtime.GOOS))
-	command := exec.Command("go", "build", "-o", binary, "./cmd/threads-mcp")
+	args := append([]string{"build"}, flags...)
+	args = append(args, "-o", binary, "./cmd/threads-mcp")
+	command := exec.Command("go", args...)
 	command.Dir = ".."
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, output)

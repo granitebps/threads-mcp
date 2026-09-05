@@ -19,22 +19,23 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	cfg, err := config.Load(version.Version)
+	build := version.Current()
+	cfg, err := config.Load(build.Version)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "threads-mcp:", err)
 		os.Exit(1)
 	}
 
-	providerClient, err := provideradapter.New(cfg, version.Version)
+	providerClient, err := provideradapter.New(cfg, build.ProviderVersion)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "threads-mcp:", err)
 		os.Exit(1)
 	}
 
 	mcpServer := server.New(providerClient, cfg, server.BuildInfo{
-		Version:    version.Version,
-		Commit:     version.Commit,
-		Date:       version.Date,
+		Version:    build.Version,
+		Commit:     build.Commit,
+		Date:       build.Date,
 		SDKVersion: "v1.7.0",
 		Protocol:   "2026-07-28",
 	})

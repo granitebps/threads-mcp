@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	partialWarning = "upstream stopped before the requested limit; returned partial public results"
-	windowWarning  = "Threads exposes a limited public window; completeness is unknown"
-	emptySearch    = "Threads returned no public search results; completeness is unknown"
+	partialWarning       = "upstream stopped before the requested limit; returned partial public results"
+	windowWarning        = "Threads exposes a limited public window; completeness is unknown"
+	emptySearch          = "Threads returned no public search results; completeness is unknown"
+	semanticReadAttempts = 5
 )
 
 type source interface {
@@ -49,6 +50,7 @@ func New(cfg config.Config, version string) (*Client, error) {
 		Lang:      "en-US",
 		CacheDir:  cfg.CacheDir,
 		CacheTTL:  cfg.CacheTTL,
+		NoCache:   true, // An incomplete HTTP 200 response must not poison semantic retries.
 		Token:     "",
 		Session:   "",
 		CSRF:      "",
@@ -71,7 +73,9 @@ func (c *Client) SearchPosts(ctx context.Context, query string, limit int) (doma
 	if query == "" || limit < 1 {
 		return domain.Page[domain.Post]{}, invalidInput("query must be non-empty and limit must be positive")
 	}
-	return collectPage(c.searcher.Search(ctx, query, limit), limit, mapSearchResult, true)
+	return retryPage(ctx, false, func() (domain.Page[domain.Post], error) {
+		return collectPage(c.searcher.Search(ctx, query, limit), limit, mapSearchResult, true)
+	})
 }
 
 func (c *Client) GetPost(ctx context.Context, input string) (domain.Post, error) {
@@ -79,7 +83,11 @@ func (c *Client) GetPost(ctx context.Context, input string) (domain.Post, error)
 	if err != nil {
 		return domain.Post{}, err
 	}
-	post, err := c.source.Post(ctx, postURL)
+	post, err := retryRead(ctx, func() (*threads.Post, error) {
+		return c.source.Post(ctx, postURL)
+	}, func(post *threads.Post, err error) bool {
+		return isIncompleteCrawlerError(err) || err == nil && (post == nil || post.ID == "")
+	})
 	if err != nil {
 		return domain.Post{}, classify(err)
 	}
@@ -97,7 +105,9 @@ func (c *Client) GetPostReplies(ctx context.Context, input string, limit int) (d
 	if limit < 1 {
 		return domain.Page[domain.Reply]{}, invalidInput("limit must be positive")
 	}
-	return collectPage(c.source.PostReplies(ctx, postURL, limit), limit, mapReply, false)
+	return retryPage(ctx, false, func() (domain.Page[domain.Reply], error) {
+		return collectPage(c.source.PostReplies(ctx, postURL, limit), limit, mapReply, false)
+	})
 }
 
 func (c *Client) GetProfile(ctx context.Context, input string) (domain.Profile, error) {
@@ -105,7 +115,11 @@ func (c *Client) GetProfile(ctx context.Context, input string) (domain.Profile, 
 	if err != nil {
 		return domain.Profile{}, err
 	}
-	profileValue, err := c.source.Profile(ctx, username)
+	profileValue, err := retryRead(ctx, func() (*threads.Profile, error) {
+		return c.source.Profile(ctx, username)
+	}, func(profileValue *threads.Profile, err error) bool {
+		return isIncompleteCrawlerError(err) || err == nil && (profileValue == nil || profileValue.ID == "")
+	})
 	if err != nil {
 		return domain.Profile{}, classify(err)
 	}
@@ -123,7 +137,9 @@ func (c *Client) GetProfilePosts(ctx context.Context, input string, limit int) (
 	if limit < 1 {
 		return domain.Page[domain.Post]{}, invalidInput("limit must be positive")
 	}
-	return collectPage(c.source.ProfilePosts(ctx, username, limit), limit, mapPost, false)
+	return retryPage(ctx, true, func() (domain.Page[domain.Post], error) {
+		return collectPage(c.source.ProfilePosts(ctx, username, limit), limit, mapPost, false)
+	})
 }
 
 func (c *Client) Info() provider.Info {
@@ -174,6 +190,65 @@ func collectPage[Source, Target any](sequence iter.Seq2[Source, error], limit in
 		page.Warnings = append(page.Warnings, windowWarning)
 	}
 	return page, nil
+}
+
+func retryRead[T any](ctx context.Context, read func() (T, error), incomplete func(T, error) bool) (T, error) {
+	var zero T
+	for attempt := 1; attempt <= semanticReadAttempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return zero, err
+		}
+		value, err := read()
+		if !incomplete(value, err) {
+			return value, err
+		}
+		if attempt == semanticReadAttempts {
+			return zero, incompleteCrawlerResponse(err)
+		}
+	}
+	return zero, incompleteCrawlerResponse(nil)
+}
+
+func retryPage[T any](ctx context.Context, retryEmpty bool, read func() (domain.Page[T], error)) (domain.Page[T], error) {
+	for attempt := 1; attempt <= semanticReadAttempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return domain.Page[T]{}, classify(err)
+		}
+		page, err := read()
+		incomplete := isIncompleteCrawlerError(err)
+		empty := retryEmpty && err == nil && page.ReturnedCount == 0
+		if !incomplete && !empty {
+			return page, err
+		}
+		if attempt == semanticReadAttempts {
+			if empty {
+				return page, nil
+			}
+			return domain.Page[T]{}, incompleteCrawlerResponse(err)
+		}
+	}
+	return domain.Page[T]{}, incompleteCrawlerResponse(nil)
+}
+
+func isIncompleteCrawlerError(err error) bool {
+	if errors.Is(err, errSearchPageChanged) {
+		return true
+	}
+	var codeErr *threads.CodeError
+	if !errors.As(err, &codeErr) || codeErr.Code != threads.ExitNotFound {
+		return false
+	}
+	return strings.HasPrefix(codeErr.Msg, "not found: profile @") ||
+		strings.HasPrefix(codeErr.Msg, "not found: post ")
+}
+
+func incompleteCrawlerResponse(cause error) *domain.ProviderError {
+	return &domain.ProviderError{
+		Code:      domain.CodeUpstreamChanged,
+		Message:   "Threads returned an incomplete public page",
+		Retryable: true,
+		Cause:     cause,
+	}
 }
 
 func classify(err error) *domain.ProviderError {
