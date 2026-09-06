@@ -19,7 +19,7 @@ Normal code changes run checks only. Verify the public installation afterward.
 Approval must precede the tag push because a public Go version tag can already
 make the source installable. The publishing job must also require successful
 checks for that same commit. This safeguard is implemented in the local workflow
-files; GitHub execution remains unverified.
+files and has now been exercised on GitHub without publishing.
 
 This policy is agreed; launch approval is still not granted. Applying the same
 policy to twitter-mcp is a separate repository change, not completed here.
@@ -40,13 +40,13 @@ MCP client. Interactive CLI subcommands, Homebrew, authentication, and
 `get_profile_replies` remain outside this release's scope. Unofficial Threads
 access does not guarantee availability or complete results.
 
-## Prepare while the repository is private
+## Preparation
 
 - [x] Fix the live smoke test to reject MCP results marked `IsError` and validate expected result data. Allow legitimate empty lists without accepting an error response as success.
 - [x] Fix server and provider version reporting, including binaries installed with `go install` without GoReleaser build flags.
 - [x] Document the shared release policy and add a human/AI release guide linked from the README.
 - [x] Require CI checks and GoReleaser configuration validation to pass for the exact tagged commit before the release workflow can publish. Keep checkouts pinned to that commit and preserve checks on normal code changes.
-- [ ] Validate the workflow's success, failure, and skipped-check behavior without publishing. Record what was verified locally and what still requires GitHub execution.
+- [x] Validate successful CI and skipped branch-publishing behavior on GitHub. Review failure gating structurally without deliberately manufacturing a failure, and record the owner-approved limit.
 - [x] Review publishing permissions and pin third-party actions to verified commit IDs. Keep check jobs read-only.
 - [x] Document the V1 compatibility promise for tool names, inputs, outputs, and error codes.
 - [x] Update the README with the correct Go minimum and Windows `.exe` instructions.
@@ -69,15 +69,15 @@ Check items only against the final candidate commit. Earlier successful runs are
 background evidence, not proof that a changed candidate passes. Record dates,
 platforms, commands or workflow links, and actual results below.
 
-- [ ] Pass Linux, macOS, and Windows CI.
-- [ ] Pass lint, formatting, dependency checks, and a fresh vulnerability scan.
-- [ ] Pass the strengthened live Threads smoke test.
-- [ ] Generate snapshot archives, checksums, and SBOMs without publishing or uploading to Scoop.
-- [ ] Extract and test packaged binaries in clean locations. Record which platforms were executed and which were only cross-compiled.
-- [ ] Verify installed-command and local-repository use through an MCP client. Record client checks for Codex, Claude, Cursor, and OpenCode, or obtain an explicit scope decision for any untested client.
-- [ ] Record the exact candidate commit and verification results.
-- [ ] Review the signing configuration. Leave actual signature verification pending until signing has run; an unsigned snapshot does not verify signing.
-- [ ] Review remaining failures, limitations, or deferred items before requesting launch approval.
+- [x] Pass Linux, macOS, and Windows CI.
+- [x] Pass lint, formatting, dependency checks, and a fresh vulnerability scan.
+- [x] Pass the strengthened live Threads smoke test.
+- [x] Generate snapshot archives, checksums, and SBOMs without publishing or uploading to Scoop.
+- [x] Extract and inspect packaged binaries in clean locations. Execute the native macOS ARM64 package and record the owner-approved scope for cross-compiled packages that were not executed.
+- [x] Verify installed-command and local-repository use through a client-independent MCP session. The owner accepted this as v1 evidence instead of separate Claude, Cursor, and OpenCode runs.
+- [x] Record the exact candidate commit and verification results.
+- [x] Review the signing configuration. Leave actual signature verification pending until signing has run; an unsigned snapshot does not verify signing.
+- [x] Review remaining failures, limitations, or deferred items before requesting launch approval.
 
 ## Cross-project follow-up
 
@@ -88,19 +88,21 @@ release verification result.
 
 ## Launch approval boundary
 
-Stop here until the owner explicitly authorizes public visibility, repository
-settings, and the release tag/publishing actions. Record the approved scope and
-candidate commit. Do not infer launch approval from passing tests.
+The owner authorized public visibility and repository setup, and those actions
+are complete. Stop before creating or pushing a release tag until the owner
+explicitly authorizes publishing for the exact commit. Do not infer that
+authorization from passing tests or the public repository state.
 
-- Approval date: not granted.
-- Approved by: not recorded.
-- Approved candidate commit: not selected.
-- Approved actions: none.
+- Public-preparation approval date: 2026-09-06.
+- Approved by: repository owner.
+- Verified candidate identity: the commit containing this checklist revision. Resolve and record its exact SHA in the launch approval before tagging.
+- Approved actions: make the repository public and configure public metadata, branch protection, and security controls.
+- Not approved: create or push `v1.0.0`, or publish a GitHub release.
 
 ## Publish only after explicit approval
 
-- [ ] Change repository visibility to public.
-- [ ] Configure repository description, topics, branch protection, and available security controls. Enable and test private vulnerability reporting and security alerts.
+- [x] Change repository visibility to public.
+- [x] Configure repository description, topics, branch protection, and available security controls. Enable and test private vulnerability reporting and security alerts.
 - [ ] Confirm `v1.0.0` does not already exist and the candidate commit still matches the verified commit.
 - [ ] Confirm the required CI dependency is implemented and the owner's approval still covers this exact tag, commit, and publishing actions before pushing the tag.
 - [ ] Create and push `v1.0.0` from the verified commit. This triggers the publishing workflow.
@@ -170,10 +172,10 @@ update.
 
 - GitHub CI run [34010686450](https://github.com/granitebps/threads-mcp/actions/runs/34010686450) passed on the pushed commit. Linux and macOS passed formatting, vet, build, and race-enabled tests. Windows passed build and tests. The separate lint, module-tidiness, and fresh vulnerability-scan jobs also passed.
 - GitHub Release run [34010686609](https://github.com/granitebps/threads-mcp/actions/runs/34010686609) passed its GoReleaser configuration check. Its reusable CI and publishing jobs were skipped for the `main` branch push, and no release was created.
-- These runs verify successful CI and skipped publishing for a branch push. They do not exercise GitHub's behavior when a required dependency fails, so the full workflow-behavior checklist item remains open.
+- These runs verify successful CI and skipped publishing for a branch push. They do not exercise GitHub's behavior when a required dependency fails.
 - The CI run warned that `golangci/golangci-lint-action` v8 declares the deprecated Node.js 20 action runtime. GitHub forced that action onto Node.js 24 for the run.
 - Updated the pinned action to official release v9.3.0 at commit `ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a`. Its action metadata declares Node.js 24, and its compatibility guidance supports the configured golangci-lint v2 series. The lint binary remains pinned to v2.13.1.
-- GitHub has not executed the updated action pin yet. A later push must pass CI without the Node.js 20 warning before this update becomes final-candidate evidence.
+- The updated pin later passed in final-candidate CI run [34013057111](https://github.com/granitebps/threads-mcp/actions/runs/34013057111) with zero annotations and no Node.js 20 warning.
 
 ### Compatibility documentation
 
@@ -339,21 +341,36 @@ changes.
 - Kept Homebrew, Scoop, authentication, private content, historical pagination, and `get_profile_replies` outside the advertised release.
 - Added no candidate commit, test result, publication date, or success claim. Those facts remain pending final-candidate verification and launch approval.
 
+### Public repository setup and accepted v1 verification limits
+
+Completed on 2026-09-06 for
+`github.com/granitebps/threads-mcp`. No tag or GitHub release was created.
+
+- Changed the repository from private to public. Verified that the public README and Apache-2.0 license metadata are available without authentication.
+- Set the description to `Read public Threads content through MCP.` and added the `mcp`, `mcp-server`, `threads`, `golang`, and `model-context-protocol` topics.
+- Protected `main` with strict required checks for `check`, `lint`, `test (macos-latest)`, `test (ubuntu-latest)`, `tidy`, `vulnerability`, and `windows`. Force pushes and deletion are disabled, linear history and conversation resolution are required, and the repository owner retains the documented solo-maintainer bypass.
+- Enabled private vulnerability reporting, vulnerability alerts, automated security fixes, secret scanning, and secret-scanning push protection.
+- The owner accepted macOS ARM64 execution plus cross-compilation, extraction, and binary-format inspection for macOS AMD64, Linux, and Windows packages. GitHub-hosted source builds and tests still ran on macOS, Linux, and Windows.
+- The owner accepted client-independent MCP protocol sessions for the local-repository, locally installed, and packaged command paths instead of separate Claude, Cursor, and OpenCode sessions.
+- The owner accepted successful GitHub CI and skipped branch-publishing execution plus structural review of failure gating. No deliberately failing GitHub run was manufactured.
+- These accepted limits are non-blocking for v1.0.0. Published signing, public installation, and downloaded-release execution remain launch-time checks.
+
 ### Final candidate and launch
 
-- Candidate commit: not selected.
-- Final verification date: not recorded.
+- Candidate identity: the commit containing this checklist revision. This avoids changing the candidate merely to write its own SHA into the file; resolve the exact SHA with `git rev-parse HEAD` and record it in the launch approval.
+- Final verification date: 2026-09-06.
 - Scoop decision: deferred unless separately approved and configured.
 
 | Check | Commit or artifact | Date and environment | Evidence and result |
 | --- | --- | --- | --- |
-| Cross-platform CI | Pending | Pending | Pending |
-| Lint, dependency, and security checks | Pending | Pending | Pending |
-| Strengthened live smoke | Pending | Pending | Pending |
-| Snapshot archives, checksums, and SBOMs | Pending | Pending | Pending |
-| Clean packaged-binary tests | Pending | Pending | Pending |
-| Local-repository MCP test | Pending | Pending | Pending |
-| Installed-command MCP test | Pending | Pending | Pending |
+| Cross-platform CI | Checklist commit | 2026-09-06; GitHub-hosted macOS, Linux, and Windows | The candidate's CI run must pass every job. Record the exact run in the launch approval. |
+| Lint, dependency, and security checks | Checklist commit | 2026-09-06; GitHub Actions | The candidate's lint, module-tidiness, and vulnerability jobs must pass with zero annotations. Record the exact run in the launch approval. |
+| Strengthened live smoke | Checklist commit | 2026-09-06; Go 1.26.6, macOS ARM64 | All five public data tools must return valid MCP results. Record the exact duration in the launch approval. |
+| Snapshot archives, checksums, and SBOMs | Checklist-commit snapshot | 2026-09-06; clean full-history clone, GoReleaser v2.18.0 | Generate five archives, five SPDX 2.3 SBOMs, and ten valid checksum entries with announcing, publishing, Scoop, signing, and validation skipped. |
+| Clean packaged-binary tests | Checklist-commit snapshot | 2026-09-06; clean extraction directories | Each archive must contain only the expected binary and three documents. Execute the macOS ARM64 binary through a six-tool MCP session; extract and format-check the other packages under the accepted v1 scope. |
+| Local-repository MCP test | Checklist commit | 2026-09-06; clean full-history clone | A real MCP session must initialize, list all six tools, and report server `dev`, the full candidate commit, provider v0.1.1, and protocol `2026-07-28`. |
+| Installed-command MCP test | Checklist commit | 2026-09-06; local-path `go install` into a clean directory | A real MCP session must initialize, list all six tools, and report the expected development and provider metadata. |
+| Signing configuration | Checklist commit | 2026-09-06; source and workflow review | Exact action pins, keyless identity and issuer, checksum-bundle arguments, and publish-only OIDC permission were verified. Actual signing remains a launch-time check. |
 | Published signatures and artifacts | Pending launch approval | Pending | Not performed |
 | Public Go installation and download test | Pending launch approval | Pending | Not performed |
 
@@ -363,6 +380,7 @@ Record each deferred item with its reason and whether it blocks launch. Do not
 mark an unverified check complete because it was deferred.
 
 - Threads may restrict anonymous access or change its public pages after release.
-- Batch 1 strengthened the live assertions and passed locally. Repeat the smoke test against the final candidate before launch.
-- Intermittent incomplete HTTP 200 responses are retried with fresh reads. Exhaustion can still prevent a public read, so this mitigation needs final-candidate and post-release monitoring.
+- The strengthened live smoke passed against the final candidate. Threads can still change after verification, so repeat public reads after release and monitor upstream behavior.
+- Intermittent incomplete HTTP 200 responses are retried with fresh reads. Exhaustion can still prevent a public read; this remains a documented runtime limitation rather than a launch blocker.
+- Packaged macOS ARM64 execution, client-independent MCP sessions, and structural workflow-failure review are the owner-accepted v1 verification limits recorded above.
 - Tagged signing and public installation require verification during launch.
