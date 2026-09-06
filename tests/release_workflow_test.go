@@ -82,6 +82,14 @@ func TestReadmeHasOneCodexServerHeader(t *testing.T) {
 	}
 }
 
+func TestTextBetweenHandlesWindowsNewlines(t *testing.T) {
+	text := "jobs:\r\n  check:\r\n    runs-on: ubuntu-latest\r\n  release:\r\n"
+	got := textBetween(t, text, "\n  check:\n", "\n  release:\n")
+	if !strings.Contains(got, "runs-on: ubuntu-latest") {
+		t.Fatalf("check job = %q", got)
+	}
+}
+
 func readRepositoryFile(t *testing.T, name string) string {
 	t.Helper()
 	contents, err := os.ReadFile(filepath.Join("..", name))
@@ -93,6 +101,7 @@ func readRepositoryFile(t *testing.T, name string) string {
 
 func textBetween(t *testing.T, text, start, end string) string {
 	t.Helper()
+	text = strings.ReplaceAll(text, "\r\n", "\n")
 	startIndex := strings.Index(text, start)
 	if startIndex < 0 {
 		t.Fatalf("missing section start %q", start)
