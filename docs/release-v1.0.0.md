@@ -162,6 +162,19 @@ Reviewed on 2026-09-05 against base commit
 - Added `--skip=scoop` to the automated release command and removed the Scoop credential from its environment. This prevents an existing secret from enabling the deferred upload.
 - The workflow-policy check failed before the edit because actions used moving tags. The same check passed afterward, confirming the approved action commits, limited publishing permissions, and disabled Scoop upload. Actionlint and `goreleaser check` also passed. GitHub execution remains pending.
 
+### GitHub workflow execution and Node.js runtime review
+
+Reviewed on 2026-09-06 against commit
+`d6e4f16e45b71436528d49beba954771ee4ea42d` plus the uncommitted action-pin
+update.
+
+- GitHub CI run [34010686450](https://github.com/granitebps/threads-mcp/actions/runs/34010686450) passed on the pushed commit. Linux and macOS passed formatting, vet, build, and race-enabled tests. Windows passed build and tests. The separate lint, module-tidiness, and fresh vulnerability-scan jobs also passed.
+- GitHub Release run [34010686609](https://github.com/granitebps/threads-mcp/actions/runs/34010686609) passed its GoReleaser configuration check. Its reusable CI and publishing jobs were skipped for the `main` branch push, and no release was created.
+- These runs verify successful CI and skipped publishing for a branch push. They do not exercise GitHub's behavior when a required dependency fails, so the full workflow-behavior checklist item remains open.
+- The CI run warned that `golangci/golangci-lint-action` v8 declares the deprecated Node.js 20 action runtime. GitHub forced that action onto Node.js 24 for the run.
+- Updated the pinned action to official release v9.3.0 at commit `ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a`. Its action metadata declares Node.js 24, and its compatibility guidance supports the configured golangci-lint v2 series. The lint binary remains pinned to v2.13.1.
+- GitHub has not executed the updated action pin yet. A later push must pass CI without the Node.js 20 warning before this update becomes final-candidate evidence.
+
 ### Compatibility documentation
 
 Reviewed on 2026-09-05 against base commit
