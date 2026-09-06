@@ -9,7 +9,7 @@ import (
 
 const (
 	cosignInstaller = "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2"
-	syftInstaller   = "anchore/sbom-action/download-syft@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6"
+	syftInstaller   = "anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2"
 )
 
 func TestReleaseWorkflowUsesCompatiblePinnedToolchain(t *testing.T) {

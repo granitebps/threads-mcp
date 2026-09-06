@@ -21,6 +21,7 @@ change. It repairs publishing and adds earlier validation for future releases.
 ## Recovery changes
 
 - [x] Pin Cosign Installer v4.1.2, which supports Cosign v3 release assets, while keeping Cosign v3.1.3.
+- [x] Pin the Syft installer action to v0.24.2 so it uses GitHub's supported Node.js 24 action runtime, while keeping Syft v1.51.0.
 - [x] Install the exact Cosign and Syft versions during the read-only release check and print both versions.
 - [x] Sign and verify a temporary payload with Cosign v3 using an ephemeral local key, without OIDC credentials or transparency-log upload.
 - [x] Run a complete GoReleaser snapshot with archives, checksums, and SBOMs on ordinary pushes and pull requests without signing or publishing.
