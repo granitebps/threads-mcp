@@ -1,6 +1,7 @@
 # v1.0.0 publishing checklist
 
-Status: preparation in progress. Publishing is not authorized.
+Status: source tag published; binary release incomplete and superseded by the
+[v1.0.1 recovery checklist](release-v1.0.1.md).
 
 This checklist records the work needed to prepare and publish the first public
 release. Creating this file does not authorize implementation, commits, pushes,
@@ -21,8 +22,8 @@ make the source installable. The publishing job must also require successful
 checks for that same commit. This safeguard is implemented in the local workflow
 files and has now been exercised on GitHub without publishing.
 
-This policy is agreed; launch approval is still not granted. Applying the same
-policy to twitter-mcp is a separate repository change, not completed here.
+This policy was used for the v1.0.0 tag. Applying the same policy to twitter-mcp
+is a separate repository change, not completed here.
 
 ## Release scope
 
@@ -88,32 +89,36 @@ release verification result.
 
 ## Launch approval boundary
 
-The owner authorized public visibility and repository setup, and those actions
-are complete. Stop before creating or pushing a release tag until the owner
-explicitly authorizes publishing for the exact commit. Do not infer that
-authorization from passing tests or the public repository state.
-
-- Public-preparation approval date: 2026-09-06.
-- Approved by: repository owner.
-- Verified candidate identity: the commit containing this checklist revision. Resolve and record its exact SHA in the launch approval before tagging.
-- Approved actions: make the repository public and configure public metadata, branch protection, and security controls.
-- Not approved: create or push `v1.0.0`, or publish a GitHub release.
+The repository owner approved creating and pushing `v1.0.0` from commit
+`975bec50ed9b213a79bfa855beab03059bcadc1e` on 2026-09-06. The tag push made
+the Go source version public and started automated publishing. That approval
+has been consumed; it does not authorize moving the tag or publishing another
+version.
 
 ## Publish only after explicit approval
 
 - [x] Change repository visibility to public.
 - [x] Configure repository description, topics, branch protection, and available security controls. Enable and test private vulnerability reporting and security alerts.
-- [ ] Confirm `v1.0.0` does not already exist and the candidate commit still matches the verified commit.
-- [ ] Confirm the required CI dependency is implemented and the owner's approval still covers this exact tag, commit, and publishing actions before pushing the tag.
-- [ ] Create and push `v1.0.0` from the verified commit. This triggers the publishing workflow.
+- [x] Confirm `v1.0.0` did not already exist and the candidate commit matched the verified commit.
+- [x] Confirm the required CI dependency was implemented and the owner's approval covered this exact tag, commit, and publishing actions before pushing the tag.
+- [x] Create and push `v1.0.0` from the verified commit. This triggered the publishing workflow.
 - [ ] Confirm the release workflow succeeds.
 - [ ] Verify published archives, checksums, SBOMs, and the Cosign bundle, including the expected signing identity and issuer.
-- [ ] Test public `go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.0` from a clean environment.
+- [x] Test public `go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.0` from a clean environment.
 - [ ] Download a published binary and repeat the real MCP test.
 - [ ] Confirm the release page and README installation links work.
 
 Do not move or overwrite a published `v1.0.0` tag to correct a defect. Record the
 failure and obtain approval for a corrective release.
+
+### v1.0.0 publication incident
+
+- The annotated `v1.0.0` tag resolves to approved commit `975bec50ed9b213a79bfa855beab03059bcadc1e` and must remain unchanged.
+- [Publishing run 34016585356](https://github.com/granitebps/threads-mcp/actions/runs/34016585356) passed the reusable CI and release-check jobs, then failed while installing Cosign before GoReleaser could publish.
+- The workflow pinned Cosign Installer v3.10.0 and requested Cosign v3.1.3. That installer expected a legacy `.sig` asset, while Cosign v3.1.3 publishes `.sigstore.json`; its download returned HTTP 404.
+- No GitHub Release, binary archive, checksum file, signature bundle, or SBOM was created for v1.0.0.
+- A clean public `go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.0` succeeded. The installed server initialized over MCP, listed all six tools, and reported server version `1.0.0` and provider version `v0.1.1`.
+- GitHub reruns use the workflow from the tagged commit, so rerunning cannot pick up an installer fix from `main`. Recovery therefore uses immutable patch version v1.0.1.
 
 ## Verification evidence
 

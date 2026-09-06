@@ -58,16 +58,16 @@ go run ./cmd/threads-mcp
 
 ## Install the command
 
-After v1.0.0 is published and the repository is public, install that exact
-version with Go:
+After v1.0.1 is published, install that exact version with Go:
 
 ```bash
-go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.0
+go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.1
 ```
 
-This command is expected to fail before the tag and public repository exist. Do
-not use it as a pre-release test. After publication, run it from outside this
-source checkout so the test cannot select local source.
+Until then, the `v1.0.0` source tag is installable with Go, but its publishing
+workflow did not create a GitHub Release or binary archives. Use `v1.0.1` for
+the complete release after it is published. Run versioned-install tests from
+outside this source checkout so they cannot select local source.
 
 Go writes the executable to `GOBIN`. If `GOBIN` is empty, it uses the `bin`
 directory under the first `GOPATH` entry. Find the installed command on macOS or
@@ -91,22 +91,22 @@ Use that absolute path as the MCP command. Installing with `@latest` is also
 supported after publication, but client configurations should pin a tested
 version when reproducibility matters.
 
-GitHub Release archives are planned for Linux and macOS on `amd64` and `arm64`,
-and Windows on `amd64`.
+The v1.0.1 GitHub Release will provide archives for Linux and macOS on `amd64`
+and `arm64`, and Windows on `amd64`.
 
 ## Download a release archive
 
-After v1.0.0 is published, open the
-[v1.0.0 release](https://github.com/granitebps/threads-mcp/releases/tag/v1.0.0)
+After v1.0.1 is published, open the
+[v1.0.1 release](https://github.com/granitebps/threads-mcp/releases/tag/v1.0.1)
 and download the archive for your computer:
 
 | Operating system | CPU | Archive |
 |---|---|---|
-| macOS | Apple silicon (`arm64`) | `threads-mcp_1.0.0_darwin_arm64.tar.gz` |
-| macOS | Intel (`amd64`) | `threads-mcp_1.0.0_darwin_amd64.tar.gz` |
-| Linux | `arm64` | `threads-mcp_1.0.0_linux_arm64.tar.gz` |
-| Linux | `amd64` | `threads-mcp_1.0.0_linux_amd64.tar.gz` |
-| Windows | `amd64` | `threads-mcp_1.0.0_windows_amd64.zip` |
+| macOS | Apple silicon (`arm64`) | `threads-mcp_1.0.1_darwin_arm64.tar.gz` |
+| macOS | Intel (`amd64`) | `threads-mcp_1.0.1_darwin_amd64.tar.gz` |
+| Linux | `arm64` | `threads-mcp_1.0.1_linux_arm64.tar.gz` |
+| Linux | `amd64` | `threads-mcp_1.0.1_linux_amd64.tar.gz` |
+| Windows | `amd64` | `threads-mcp_1.0.1_windows_amd64.zip` |
 
 The archives also contain the license, README, and third-party notices. The
 release includes a software bill of materials for each archive.
@@ -120,7 +120,7 @@ newer, then authenticate the checksum file against the exact GitHub Actions
 workflow and release tag:
 
 ```bash
-release_tag=v1.0.0
+release_tag=v1.0.1
 cosign verify-blob \
   --bundle checksums.txt.bundle \
   --certificate-identity "https://github.com/granitebps/threads-mcp/.github/workflows/release.yml@refs/tags/$release_tag" \
@@ -131,7 +131,7 @@ cosign verify-blob \
 On macOS, verify the selected archive against that authenticated checksum file:
 
 ```bash
-archive=threads-mcp_1.0.0_darwin_arm64.tar.gz
+archive=threads-mcp_1.0.1_darwin_arm64.tar.gz
 expected=$(awk -v name="$archive" '$2 == name { print $1 }' checksums.txt)
 actual=$(shasum -a 256 "$archive" | awk '{ print $1 }')
 test -n "$expected" && test "$actual" = "$expected"
@@ -144,8 +144,8 @@ commands with the correct Linux archive and replace `shasum -a 256` with
 On Windows PowerShell:
 
 ```powershell
-$releaseTag = "v1.0.0"
-$archive = "threads-mcp_1.0.0_windows_amd64.zip"
+$releaseTag = "v1.0.1"
+$archive = "threads-mcp_1.0.1_windows_amd64.zip"
 cosign verify-blob --bundle checksums.txt.bundle --certificate-identity "https://github.com/granitebps/threads-mcp/.github/workflows/release.yml@refs/tags/$releaseTag" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" checksums.txt
 $expected = Get-Content checksums.txt | Where-Object { $_ -match "  $([regex]::Escape($archive))$" } | ForEach-Object { ($_ -split '\s+')[0] }
 if (-not $expected) { throw "Archive is missing from checksums.txt" }
@@ -160,14 +160,14 @@ the macOS executable or Authenticode-sign the Windows executable.
 Extract the verified archive:
 
 ```bash
-mkdir threads-mcp_1.0.0
-tar -xzf "$archive" -C threads-mcp_1.0.0
+mkdir threads-mcp_1.0.1
+tar -xzf "$archive" -C threads-mcp_1.0.1
 ```
 
 On Windows PowerShell:
 
 ```powershell
-Expand-Archive -Path $archive -DestinationPath .\threads-mcp_1.0.0
+Expand-Archive -Path $archive -DestinationPath .\threads-mcp_1.0.1
 ```
 
 Configure your MCP client with the absolute path to the extracted `threads-mcp`
@@ -175,8 +175,8 @@ or `threads-mcp.exe`. Starting the executable in a terminal appears to wait for
 input because it speaks MCP over standard input and output; use an MCP client to
 test it.
 
-Windows Scoop distribution is deferred and is not available for v1.0.0. Use
-`go install`, a GitHub Release `.zip` after publication, or a local build.
+Windows Scoop distribution is deferred and is not available for v1.0.1. Use
+`go install`, the GitHub Release `.zip`, or a local build.
 
 ## Client configuration
 
@@ -326,7 +326,7 @@ No authentication, session, CSRF, proxy, or API-key setting is supported.
 - Fields that Threads omits stay omitted. Media URLs belong to Threads and may
   expire after a result is returned.
 - Release checksums use Cosign, but the executables are not Apple-notarized or
-  Windows Authenticode-signed. Homebrew and Scoop are not available for v1.0.0.
+  Windows Authenticode-signed. Homebrew and Scoop are not available for v1.0.1.
 
 ## Troubleshooting
 
@@ -428,13 +428,15 @@ go test -tags=live ./internal/provider/threadscli -run TestAnonymousCrawlerPubli
 
 Use the [release guide](RELEASE.md) for preparation, approval, publishing, and
 verification instructions for humans and AI agents. The
-[v1.0.0 checklist](docs/release-v1.0.0.md) tracks outstanding work and evidence.
+[v1.0.1 checklist](docs/release-v1.0.1.md) tracks the recovery release, while the
+[v1.0.0 checklist](docs/release-v1.0.0.md) records the first tag and its failed
+binary-publishing run.
 
 The owner approves each release before its version tag is pushed. A `v*` tag
 push starts the release workflow, which requires CI and release-configuration
-checks to succeed for the tagged commit before publishing. The workflow changes
-still need verification on GitHub before launch. Normal code pushes do not
-publish a release.
+checks to succeed for the tagged commit before publishing. Normal code pushes
+exercise the publishing toolchain and build release packages without signing,
+uploading, or creating a release.
 
 ## Contributing
 

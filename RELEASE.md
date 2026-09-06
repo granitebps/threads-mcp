@@ -1,8 +1,10 @@
 # Release guide
 
 Use this guide to prepare and publish a threads-mcp release. It is written for
-maintainers and AI agents. The [v1.0.0 checklist](docs/release-v1.0.0.md) records
-the remaining work and verification evidence for the first release.
+maintainers and AI agents. Use the checklist for the version being prepared.
+The [v1.0.1 checklist](docs/release-v1.0.1.md) covers the current recovery
+release, and the [v1.0.0 checklist](docs/release-v1.0.0.md) records the first
+tag and its incomplete binary release.
 
 Reading this guide or completing its checks does not authorize publication.
 Obtain explicit approval for the version, exact commit, and publishing actions.
@@ -29,19 +31,18 @@ different code. See the [Go publishing guidance](https://go.dev/doc/modules/publ
 
 ## Current implementation and scope
 
-The workflow now includes the release checks, but GitHub execution and the
-remaining release preparation are still pending:
+The release workflow separates read-only preparation from tag-only publishing:
 
 - [CI](.github/workflows/ci.yml) runs on main-branch pushes and pull requests and can be called by the release workflow. It checks Linux, macOS, Windows, formatting, build, tests, dependencies, lint, and vulnerabilities.
-- [Release automation](.github/workflows/release.yml) checks GoReleaser configuration on main-branch pushes, pull requests, and `v*` tag pushes. Tag pushes also call the same-commit CI workflow. The publishing job requires both CI and configuration checks to succeed. CI and release checkouts use the triggering commit ID, not a moving branch or tag. External actions are pinned to verified commit IDs with their release versions in comments. Local validation does not replace verification of this behavior on GitHub before launch.
+- [Release automation](.github/workflows/release.yml) installs and exercises the pinned Cosign and Syft tools, checks GoReleaser configuration, and builds a complete unsigned snapshot on main-branch pushes, pull requests, and `v*` tag pushes. Tag pushes also call the same-commit CI workflow. The publishing job requires both CI and the release preflight to succeed. CI and release checkouts use the triggering commit ID, not a moving branch or tag. External actions are pinned to verified commit IDs with their release versions in comments.
 - [Live smoke testing](.github/workflows/live-smoke.yml) is separate from CI. A scheduled run on another commit is not evidence for the release candidate.
 - [GoReleaser configuration](.goreleaser.yaml) defines downloads, checksums, dependency inventories called SBOMs, and Cosign signing. Configuration alone does not prove that published files or signatures work.
 - Scoop is deferred. The release command explicitly skips Scoop and does not pass its token, so an existing repository secret cannot enable upload. Enabling Scoop later requires a separately approved workflow change.
 - Homebrew and MCP Registry publishing are not configured. Ordinary Go modules and binary archives are not listed as supported Registry package types. Registry publication needs a separate packaging decision. Check the [current package types](https://modelcontextprotocol.io/registry/package-types) before adding it.
 
-Unverified release-workflow execution remains a launch check. Deferred distribution
-channels do not block release, provided they stay disabled and are not advertised
-as available.
+The tag-only path still provides the first real test of GitHub OIDC signing and
+release upload for a version. Deferred distribution channels do not block a
+release, provided they stay disabled and are not advertised as available.
 
 Stop if this guide and the checked-out workflows disagree. Resolve the difference
 before publishing; do not treat the guide as proof that a safeguard exists.
@@ -51,11 +52,11 @@ before publishing; do not treat the guide as proof that a safeguard exists.
 Before running checks:
 
 - Read the repository instructions and version-specific checklist.
-- Confirm the version, release notes, supported platforms, installation instructions, license notices, and known limitations.
+- Confirm `docs/release-notes-VERSION_TAG.md` exists for the exact tag, and review its version, supported platforms, installation instructions, license notices, and known limitations.
 - Compare tool schemas and error behavior with the [v1 compatibility promise](docs/v1-compatibility.md). Treat an incompatible change as a release blocker unless the approved version and migration plan account for it.
 - Review tracked files and history for secrets or unintended personal information before making the repository public. Do not copy discovered secrets into logs or release notes.
 - Use a clean checkout of the intended commit. Preserve unrelated work; do not reset or discard it to make checks pass.
-- Use the Go version required by `go.mod`, currently Go 1.26.6 or newer. Match the tool versions in the workflows. The current release pins are GoReleaser v2.18.0, Cosign v3.1.3, and Syft v1.51.0.
+- Use the Go version required by `go.mod`, currently Go 1.26.6 or newer. Match the tool versions in the workflows. The current release pins are GoReleaser v2.18.0, Cosign Installer v4.1.2, Cosign v3.1.3, and Syft v1.51.0.
 - Review publishing permissions and credentials. The workflows default to read-only repository contents. Only the publishing job has `contents: write` for GitHub Release uploads and `id-token: write` for keyless Cosign signing. It receives the built-in `GITHUB_TOKEN`; Scoop credentials are not passed. External actions use verified commit IDs. See [GitHub's security guidance](https://docs.github.com/en/actions/reference/security/secure-use).
 
 The command examples below use a POSIX shell and start in the repository root.
@@ -110,28 +111,35 @@ fail; valid empty lists are allowed. Do not weaken assertions to work around
 Threads access failures. Record the failure and stop release preparation until
 it is understood and resolved or explicitly reviewed by the owner.
 
-### Package rehearsal
+### Publishing-toolchain and package rehearsal
 
 Use a fresh disposable checkout of the candidate, with full Git history and
 the pinned GoReleaser and Syft tools installed. GoReleaser's pre-build hook runs
 `go mod tidy`, so check afterward that tracked files did not change.
 
+The workflow's read-only `check` job must install the exact Cosign release,
+print the Cosign and Syft versions, sign and verify a temporary payload with an
+ephemeral local key, and run the complete snapshot build. This detects installer,
+command-line, packaging, and SBOM failures before a release tag exists. It does
+not request an OIDC token or upload the temporary signature to a transparency
+log.
+
 ```bash
 goreleaser check
-goreleaser release --snapshot --skip=sign,scoop
+goreleaser release --snapshot --clean --skip=sign,scoop
 git diff --exit-code
 ```
 
 Snapshot mode does not publish. Signing and Scoop are explicitly skipped here.
-Do not substitute a normal release command. Do not add `--clean` unless deletion
-of that checkout's generated `dist` directory is intended and approved.
+Do not substitute a normal release command. `--clean` deletes only the disposable
+checkout's generated `dist` directory before rebuilding it.
 
 Inspect the generated files, not just the command's exit status:
 
 - Confirm archives for Linux and macOS on amd64 and arm64, plus Windows amd64.
 - Confirm the license, README, third-party notices, checksums, and SBOMs are present as configured.
 - Verify checksums and extract the archive for the current operating system into a clean directory.
-- Connect an MCP client to the extracted executable using its absolute path. Windows uses `threads-mcp.exe`.
+- Connect an MCP client to the extracted executable using its absolute path. Windows uses `threads-mcp.exe`. Maintainers can set `THREADS_MCP_TEST_BINARY` to that absolute path and `THREADS_MCP_TEST_VERSION` to the expected build version, then run `go test -count=1 ./tests -run TestPackagedBinaryHandshakeAndTools -v`.
 - List all six tools and call `get_server_info`. Verify the reported version against the snapshot's generated metadata and the provider version against the pinned dependency.
 - Test local-repository use and an installed executable separately, following the [client setup instructions](README.md#client-configuration). Verify successful data-reading calls and no non-protocol startup output on stdout.
 
@@ -190,6 +198,10 @@ The required checks must pass before the workflow builds and publishes the
 release downloads. A failed, cancelled, or skipped required check must prevent
 publishing. Never bypass this dependency to work around a failed check.
 
+The workflow loads the GitHub Release body from
+`docs/release-notes-VERSION_TAG.md`. A missing version-specific file must fail
+before GoReleaser runs.
+
 ## 5. Verify the public release
 
 - Confirm the workflow succeeded and the release tag resolves to the approved commit.
@@ -227,6 +239,12 @@ files with different builds under the same version. A retry that only finishes
 missing work on the exact same release requires inspection and explicit approval.
 If code or published content needs correction, prepare a new patch version and
 obtain approval for that release. Document the affected version and user impact.
+
+If the tag is public but publishing stops before creating a GitHub Release, the
+Go source version is already immutable. Fix the workflow on a new candidate and
+publish a new patch version; do not reuse or move the failed tag. Normal branch
+checks should reproduce the corrected installer and package path before the new
+tag is approved.
 
 Do not publish a Registry entry before its underlying package is available and
 verified. Registry distribution is currently outside this project's configured
