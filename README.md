@@ -310,6 +310,100 @@ The server uses MCP over stdio. It writes protocol messages only to stdout and d
 
 No authentication, session, CSRF, proxy, or API-key setting is supported.
 
+## Known limitations
+
+- The server reads unofficial public Threads web pages. Meta can change, limit,
+  or block those pages without notice, and availability may differ by time or
+  network location.
+- Threads sometimes returns an incomplete page with HTTP 200. The server retries
+  affected reads with up to five fresh requests. If every response is
+  incomplete, the tool returns a retryable `UPSTREAM_CHANGED` error.
+- Search, replies, and profile posts are limited public windows. The server does
+  not offer historical pagination, and an empty result does not prove that no
+  matching content exists.
+- Only content available without a Threads login is supported. The server cannot
+  read private profiles, private posts, or content hidden behind a login wall.
+- Fields that Threads omits stay omitted. Media URLs belong to Threads and may
+  expire after a result is returned.
+- Release checksums use Cosign, but the executables are not Apple-notarized or
+  Windows Authenticode-signed. Homebrew and Scoop are not available for v1.0.0.
+
+## Troubleshooting
+
+### The server appears to wait for input
+
+This is normal when the executable starts successfully in a terminal. It is an
+MCP stdio server, not an interactive command. Configure an MCP client with the
+absolute executable path and test it from that client.
+
+### The client cannot start the server
+
+Confirm that the configured path points to the built, installed, or extracted
+executable. Graphical clients may use a different `PATH` from your terminal, so
+do not configure only `threads-mcp` as the command.
+
+On macOS or Linux:
+
+```bash
+test -x /absolute/path/to/threads-mcp
+```
+
+If a manually copied executable is not executable, restore its execute bit with
+`chmod +x /absolute/path/to/threads-mcp`. On Windows, include `.exe` and check the
+path in PowerShell:
+
+```powershell
+Test-Path C:\absolute\path\to\threads-mcp.exe
+```
+
+Restart the MCP client after changing its configuration. In Codex, use `/mcp`
+to confirm that the `threads` server is connected. Startup diagnostics belong on
+stderr; any non-protocol text on stdout is a bug.
+
+Downloaded macOS and Windows executables may trigger operating-system warnings
+because they do not have platform-native signatures. Verify the release download
+as described above. A local build or version-pinned `go install` is the simplest
+alternative if local policy blocks unsigned downloads.
+
+### A data tool returns an error
+
+Use the structured `code` and `retryable` fields instead of matching message
+text. The `retryable` field in the returned error is authoritative for that
+specific failure.
+
+| Code | What to do |
+|---|---|
+| `INVALID_INPUT` | Correct the username, query, limit, or canonical Threads URL. Retrying the same input will not help. |
+| `NOT_FOUND` | Confirm that the public profile or post still exists and that its URL is correct. |
+| `ACCESS_RESTRICTED` | The content is not available to anonymous readers. This server cannot use an account to bypass that restriction. |
+| `RATE_LIMITED` | Wait before retrying. Do not run rapid retry loops. |
+| `NETWORK_FAILURE` | Check network access to `threads.com`, then retry after a short delay. |
+| `TIMEOUT` | Retry once. For consistently slow reads, set `THREADS_MCP_TIMEOUT` to a value between `5s` and `120s`. |
+| `UPSTREAM_CHANGED` | Threads returned an incomplete or unrecognized page after fresh attempts. Wait and retry later; report it if it persists. |
+| `UNSUPPORTED_OPERATION` | The requested operation is outside the server's supported tools. |
+| `INTERNAL_ERROR` | Restart the MCP server and report the problem if it repeats. |
+
+A successful empty search or list is still an unknown public window, not proof
+that Threads has no matching posts or replies. Call `get_server_info` to confirm
+the server version, provider version, access mode, and current known limitations.
+
+## Support
+
+For ordinary bugs and compatibility problems, open a
+[GitHub issue](https://github.com/granitebps/threads-mcp/issues). Include:
+
+- your operating system and CPU architecture;
+- how you installed or built the executable;
+- the MCP client and its version;
+- the server and provider versions from `get_server_info`;
+- the tool name, safe structured error, and whether the failure is consistent;
+- sanitized stderr output and a public Threads URL or query when it is safe to
+  share.
+
+Do not post credentials, cookies, tokens, private content, or sensitive local
+paths. This server does not need Threads credentials. Follow the
+[security policy](SECURITY.md) to report a suspected vulnerability privately.
+
 ## Verify a checkout
 
 ```bash
@@ -341,6 +435,12 @@ push starts the release workflow, which requires CI and release-configuration
 checks to succeed for the tagged commit before publishing. The workflow changes
 still need verification on GitHub before launch. Normal code pushes do not
 publish a release.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, verification,
+compatibility expectations, and pull request guidance. Report suspected
+vulnerabilities through [SECURITY.md](SECURITY.md), not a public issue.
 
 ## License
 

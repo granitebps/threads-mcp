@@ -53,15 +53,15 @@ access does not guarantee availability or complete results.
 - [x] Verify the README covers local-repository and installed-command setup.
 - [x] Add version-pinned installation instructions using `@v1.0.0`, clearly marked as available only after publication.
 - [x] Add user-facing release download, checksum, and signature verification instructions to the README. The maintainer procedure is in RELEASE.md.
-- [ ] Document known limitations, troubleshooting, and support.
-- [ ] Add `SECURITY.md` with a private vulnerability-reporting route.
-- [ ] Add `CONTRIBUTING.md`.
-- [ ] Add dependency-update configuration for Go modules and GitHub Actions.
-- [ ] Review tracked files and Git history for secrets or unintended personal information. Do not put discovered secrets in this checklist or logs.
-- [ ] Prepare `v1.0.0` release notes.
+- [x] Document known limitations, troubleshooting, and support.
+- [x] Add `SECURITY.md` with a private vulnerability-reporting route.
+- [x] Add `CONTRIBUTING.md`.
+- [x] Add dependency-update configuration for Go modules and GitHub Actions.
+- [x] Review tracked files and Git history for secrets or unintended personal information. Do not put discovered secrets in this checklist or logs.
+- [x] Prepare the [`v1.0.0` release notes](release-notes-v1.0.0.md).
 - [x] Record that Scoop is deferred and do not advertise it as available.
 - [x] Ensure Scoop upload stays disabled unless separately approved, including when a bucket token is present.
-- [ ] Confirm the Go SDK supports the documented MCP protocol version and review the threads-cli version and license notices.
+- [x] Confirm the Go SDK supports the documented MCP protocol version and review the threads-cli version and license notices.
 
 ## Verify the release candidate without publishing
 
@@ -100,7 +100,7 @@ candidate commit. Do not infer launch approval from passing tests.
 ## Publish only after explicit approval
 
 - [ ] Change repository visibility to public.
-- [ ] Configure repository description, topics, branch protection, and available security controls, including vulnerability reporting and alerts.
+- [ ] Configure repository description, topics, branch protection, and available security controls. Enable and test private vulnerability reporting and security alerts.
 - [ ] Confirm `v1.0.0` does not already exist and the candidate commit still matches the verified commit.
 - [ ] Confirm the required CI dependency is implemented and the owner's approval still covers this exact tag, commit, and publishing actions before pushing the tag.
 - [ ] Create and push `v1.0.0` from the verified commit. This triggers the publishing workflow.
@@ -221,6 +221,93 @@ Verified on 2026-09-05 with Go 1.26.6 on macOS ARM64, against base commit
 - Added regression coverage for recovery, exhausted retries, real not-found behavior, empty profile-post windows, post replies, search results, and cache bypass. The tests failed against the old behavior before the implementation and passed afterward.
 - Updated the live smoke to exercise the resilient provider and MCP paths rather than calling the raw dependency before the provider. Three consecutive live runs then passed all five data-reading MCP tools in 18.97, 14.41, and 13.89 seconds.
 - Threads can still return incomplete responses after every attempt. Repeat the live smoke against the final candidate and keep this risk in the public limitations.
+
+### Public limitations, troubleshooting, and support
+
+Reviewed on 2026-09-05 against commit
+`a1e2901204656b524bdf12da037cf0c470c11f12` plus the uncommitted documentation
+changes.
+
+- Added README guidance for unofficial anonymous access, incomplete-response retries, limited result windows, unsupported private content, omitted fields, expiring media URLs, platform-native signing, and deferred package managers.
+- Added startup checks for executable paths, Windows `.exe`, execute permissions, MCP stdio behavior, client restarts, and operating-system warnings.
+- Documented every v1 structured error code with a concrete user action. The guidance treats each response's `retryable` field as authoritative and explains that a successful empty window does not prove absence.
+- Added a GitHub Issues support route and a diagnostic checklist. The README tells users not to disclose credentials, cookies, tokens, private content, or sensitive paths.
+- The README sends suspected vulnerabilities to the security policy instead of the public issue tracker.
+- Checked the guidance against the implemented configuration, server error serialization, compatibility promise, and crawler retry behavior.
+
+### Security policy
+
+Reviewed on 2026-09-05 against commit
+`a1e2901204656b524bdf12da037cf0c470c11f12` plus the uncommitted documentation
+changes.
+
+- Added `SECURITY.md` with the v1 support policy, report contents, disclosure expectations, and a boundary between security reports and ordinary support.
+- Routed suspected vulnerabilities to GitHub's private vulnerability-reporting form. The repository is still private, so enabling and testing that form remains an explicit public-launch checklist item.
+- Linked the policy from the README and removed the temporary pre-launch wording.
+- No response-time guarantee or email address was invented. If GitHub's private form is unexpectedly unavailable after launch, the policy permits a detail-free public issue that reports only the broken private route.
+
+### Contributor guide
+
+Reviewed on 2026-09-05 against commit
+`a1e2901204656b524bdf12da037cf0c470c11f12` plus the uncommitted documentation
+changes.
+
+- Added `CONTRIBUTING.md` with the supported v1 scope, Go setup, deterministic checks, live-test boundary, compatibility review, dependency hygiene, and pull request expectations.
+- Matched commands and pinned tool versions to the current CI and release guide. Windows guidance uses the repository's non-race test path.
+- Kept live Threads access outside deterministic CI and told contributors to report, not hide, upstream failures.
+- Linked the guide from the README. Security reports remain routed to `SECURITY.md`.
+- Did not invent a code of conduct, contributor license agreement, commit-signing rule, response-time promise, or release authority for contributors.
+
+### Dependency updates
+
+Reviewed on 2026-09-05 against commit
+`a1e2901204656b524bdf12da037cf0c470c11f12` plus the uncommitted preparation
+changes.
+
+- Added `.github/dependabot.yml` with weekly version checks for the root Go module and GitHub Actions.
+- Kept dependency updates in separate pull requests so each upgrade has its own CI result and review. Dependabot's default limit of five open version-update pull requests per ecosystem remains unchanged.
+- Used `chore(deps)`-style commit and pull request titles to match the repository's existing commit style.
+- Added no auto-merge, assignee, private registry, credential, ignore rule, or target-branch configuration.
+- The current workflow actions remain pinned to commit IDs with same-line version comments, a format GitHub documents as supported by Dependabot.
+- Parsed and checked the file locally. GitHub has not processed the configuration yet.
+
+### Secret and personal-information review
+
+Reviewed on 2026-09-06 against commit
+`a1e2901204656b524bdf12da037cf0c470c11f12` plus the uncommitted preparation
+changes.
+
+- Ran a metadata-only pattern scan over all 63 reachable historical text blobs, all three commit messages, and 50 tracked or untracked non-ignored worktree files. No historical binary blobs were skipped.
+- Found no private-key headers, common provider token formats, assigned credentials, authenticated URLs, authorization values, JWTs, home-directory paths, or macOS temporary paths. Project-authored content contains no email addresses. The complete third-party license bundle contains two upstream attribution email addresses copied verbatim from required license text; both match their sources and are intentional.
+- Confirmed that the configured origin URL contains no embedded credential.
+- Found one distinct non-GitHub-noreply commit identity, used by all three commits. The owner explicitly accepted that identity for the future public history on 2026-09-05. Its name and email address are not copied into this checklist.
+- Pattern matching cannot prove that no secret exists. Repeat the review against the final release candidate and enable the available GitHub security controls at launch.
+
+### SDK, provider dependency, and license review
+
+Reviewed on 2026-09-06 against commit
+`a1e2901204656b524bdf12da037cf0c470c11f12` plus the uncommitted preparation
+changes.
+
+- Confirmed that `github.com/modelcontextprotocol/go-sdk v1.7.0` is the latest stable release. The only newer versions are v1.8.0 prereleases, so no SDK upgrade was made.
+- Confirmed from the SDK release notes and source that v1.7.0 supports MCP protocol version `2026-07-28` and can negotiate supported older versions. The compatibility document now distinguishes the SDK's newest supported version from a session's negotiated version.
+- Confirmed that `github.com/tamnd/threads-cli v0.1.1` is the latest tag. The only newer upstream commit changes release-workflow action pins, not provider behavior, so the project remains on the stable tag instead of using a pseudo-version.
+- Verified that threads-cli v0.1.1 uses Apache License 2.0, including its exact upstream copyright line, and has no root `NOTICE` file.
+- Replaced the abbreviated third-party notice with exact upstream license text for all 19 modules compiled into at least one supported release target: Linux and macOS on `amd64` and `arm64`, plus Windows on `amd64`, with `CGO_ENABLED=0`.
+- Verified every bundled license section byte-for-byte against the corresponding module cache file. Every compiled module had a root license file.
+- Confirmed that GoReleaser already includes `THIRD_PARTY_NOTICES.md` in every archive, so no release configuration change was needed.
+
+### Release notes
+
+Reviewed on 2026-09-05 against commit
+`a1e2901204656b524bdf12da037cf0c470c11f12` plus the uncommitted preparation
+changes.
+
+- Added `docs/release-notes-v1.0.0.md` as the canonical GitHub release-body draft.
+- Covered the six tools, version-pinned Go installation, supported release archives, client setup, download verification, access limits, v1 compatibility, support, and private security reporting.
+- Described v1.0.0 as the first stable release instead of inventing migration steps from an earlier release.
+- Kept Homebrew, Scoop, authentication, private content, historical pagination, and `get_profile_replies` outside the advertised release.
+- Added no candidate commit, test result, publication date, or success claim. Those facts remain pending final-candidate verification and launch approval.
 
 ### Final candidate and launch
 

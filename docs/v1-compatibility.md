@@ -119,6 +119,9 @@ a stable order, cursor, offset, archive, or exhaustive result set.
 
 Build values may be `dev` or `unknown` for a local checkout. The provider version
 identifies the provider dependency; it is not the server version.
+`protocol_version` is the newest protocol version supported by the embedded SDK,
+not the version negotiated for an individual client session. The SDK can
+negotiate an older supported version with a client.
 
 ## Structured errors
 
