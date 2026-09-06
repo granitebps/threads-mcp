@@ -310,6 +310,23 @@ changes.
 - Verified every bundled license section byte-for-byte against the corresponding module cache file. Every compiled module had a root license file.
 - Confirmed that GoReleaser already includes `THIRD_PARTY_NOTICES.md` in every archive, so no release configuration change was needed.
 
+### Snapshot package and live smoke rehearsal
+
+Verified on 2026-09-06 with Go 1.26.6, GoReleaser v2.18.0, and Syft on
+macOS ARM64 against clean commit
+`9e2b8810f070ef680f91991a82bf59a3a437c9c4`.
+
+- Ran `goreleaser release --snapshot --skip=sign,scoop` from a disposable full-history clone. GoReleaser reported that announce, publishing, Scoop, signing, and release validation were skipped. The rehearsal created no tag or GitHub release and did not replace the workspace's existing ignored `dist` directory.
+- Generated five archives for Linux and macOS on `amd64` and `arm64`, plus Windows on `amd64`. Generated five SPDX 2.3 SBOMs and a SHA-256 checksum file covering all ten files; every checksum passed.
+- Confirmed that every archive contains exactly the target binary, `LICENSE`, `README.md`, and `THIRD_PARTY_NOTICES.md`. The three documents matched the candidate source byte-for-byte.
+- Confirmed the expected Mach-O, ELF, and PE32+ binary formats. The Linux binaries are statically linked.
+- Compared each SBOM with the target-specific compiled dependency graph. Both macOS SBOMs contain all 19 compiled modules, both Linux SBOMs contain all 17, and the Windows SBOM contains all 18. Each also identifies the root module and Go standard library.
+- Extracted every archive into its own clean directory. Executed the packaged macOS ARM64 binary through a real MCP session: initialization passed, all six tools were listed, and `get_server_info` reported snapshot version `0.0.0-SNAPSHOT-9e2b881`, commit `9e2b881`, provider v0.1.1, and protocol `2026-07-28`.
+- Did not execute the packaged macOS AMD64, Linux, or Windows binaries. They were cross-compiled, extracted, and format-checked. The separate GitHub CI run exercised source builds and tests on Linux, macOS, and Windows, not these packaged files.
+- Confirmed that GoReleaser's `go mod tidy` hook left the candidate checkout unchanged. Signing remains unverified because the approved snapshot command intentionally skipped it.
+- Ran `go test -tags=live ./internal/provider/threadscli -run TestAnonymousCrawlerPublicReads -count=1 -v`. All five public Threads data tools returned successful MCP responses with valid payloads; the test passed in 14.40 seconds.
+- These are rehearsal results for commit `9e2b881`. Adding this record changes the repository, so the final-candidate checklist and evidence table remain open until a later exact commit passes the required checks.
+
 ### Release notes
 
 Reviewed on 2026-09-05 against commit
