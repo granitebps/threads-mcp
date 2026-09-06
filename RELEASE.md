@@ -2,9 +2,9 @@
 
 Use this guide to prepare and publish a threads-mcp release. It is written for
 maintainers and AI agents. Use the checklist for the version being prepared.
-The [v1.0.1 checklist](docs/release-v1.0.1.md) covers the current recovery
-release, and the [v1.0.0 checklist](docs/release-v1.0.0.md) records the first
-tag and its incomplete binary release.
+The [v1.0.1 checklist](docs/release-v1.0.1.md) records the completed recovery
+release, and the [v1.0.0 checklist](docs/release-v1.0.0.md) records the first tag
+and its incomplete binary release.
 
 Reading this guide or completing its checks does not authorize publication.
 Obtain explicit approval for the version, exact commit, and publishing actions.

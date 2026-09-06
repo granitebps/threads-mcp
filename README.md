@@ -58,16 +58,16 @@ go run ./cmd/threads-mcp
 
 ## Install the command
 
-After v1.0.1 is published, install that exact version with Go:
+Install the current release with Go:
 
 ```bash
 go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.1
 ```
 
-Until then, the `v1.0.0` source tag is installable with Go, but its publishing
-workflow did not create a GitHub Release or binary archives. Use `v1.0.1` for
-the complete release after it is published. Run versioned-install tests from
-outside this source checkout so they cannot select local source.
+Version `v1.0.1` is the first complete binary release. The `v1.0.0` source tag
+is also installable with Go, but its publishing workflow did not create a GitHub
+Release or binary archives. Run versioned-install tests from outside this source
+checkout so they cannot select local source.
 
 Go writes the executable to `GOBIN`. If `GOBIN` is empty, it uses the `bin`
 directory under the first `GOPATH` entry. Find the installed command on macOS or
@@ -88,15 +88,15 @@ Join-Path $goBin "threads-mcp.exe"
 ```
 
 Use that absolute path as the MCP command. Installing with `@latest` is also
-supported after publication, but client configurations should pin a tested
-version when reproducibility matters.
+supported, but client configurations should pin a tested version when
+reproducibility matters.
 
-The v1.0.1 GitHub Release will provide archives for Linux and macOS on `amd64`
-and `arm64`, and Windows on `amd64`.
+The v1.0.1 GitHub Release provides archives for Linux and macOS on `amd64` and
+`arm64`, and Windows on `amd64`.
 
 ## Download a release archive
 
-After v1.0.1 is published, open the
+Open the
 [v1.0.1 release](https://github.com/granitebps/threads-mcp/releases/tag/v1.0.1)
 and download the archive for your computer:
 
@@ -428,9 +428,9 @@ go test -tags=live ./internal/provider/threadscli -run TestAnonymousCrawlerPubli
 
 Use the [release guide](RELEASE.md) for preparation, approval, publishing, and
 verification instructions for humans and AI agents. The
-[v1.0.1 checklist](docs/release-v1.0.1.md) tracks the recovery release, while the
-[v1.0.0 checklist](docs/release-v1.0.0.md) records the first tag and its failed
-binary-publishing run.
+[v1.0.1 checklist](docs/release-v1.0.1.md) records the completed recovery
+release, while the [v1.0.0 checklist](docs/release-v1.0.0.md) records the first
+tag and its failed binary-publishing run.
 
 The owner approves each release before its version tag is pushed. A `v*` tag
 push starts the release workflow, which requires CI and release-configuration
