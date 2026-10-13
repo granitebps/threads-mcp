@@ -62,7 +62,7 @@ func New(cfg config.Config, version string) (*Client, error) {
 	searchTransport.Proxy = nil
 	searchHTTP := &http.Client{Timeout: cfg.HTTPTimeout, Transport: searchTransport}
 	return &Client{
-		source:   upstream,
+		source:   &postPageSource{Client: upstream},
 		searcher: newSearchPageSource(searchHTTP, threads.WebBase, threads.CrawlerUA, cfg.Delay),
 		version:  version,
 	}, nil

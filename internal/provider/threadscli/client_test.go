@@ -247,7 +247,7 @@ func TestNewDisablesUpstreamCacheForFreshRetries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	upstream := client.source.(*threads.Client)
+	upstream := client.source.(*postPageSource).Client
 	upstream.Cache().Put("https://www.threads.com/@zuck", []byte("incomplete response"))
 	if _, ok := upstream.Cache().Get("https://www.threads.com/@zuck"); ok {
 		t.Fatal("upstream cache is enabled; retries can reuse an incomplete response")
