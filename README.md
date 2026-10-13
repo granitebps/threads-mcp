@@ -31,7 +31,7 @@ start with v1.0.0.
 
 ## Build from a local repository
 
-Requirements: Go 1.26.6 or newer.
+Requirements: Go 1.26.9 or newer.
 
 ```bash
 git clone https://github.com/granitebps/threads-mcp.git
@@ -61,10 +61,10 @@ go run ./cmd/threads-mcp
 Install the current release with Go:
 
 ```bash
-go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.1
+go install github.com/granitebps/threads-mcp/cmd/threads-mcp@v1.0.2
 ```
 
-Version `v1.0.1` is the first complete binary release. The `v1.0.0` source tag
+Version `v1.0.1` was the first complete binary release. The `v1.0.0` source tag
 is also installable with Go, but its publishing workflow did not create a GitHub
 Release or binary archives. Run versioned-install tests from outside this source
 checkout so they cannot select local source.
@@ -91,22 +91,22 @@ Use that absolute path as the MCP command. Installing with `@latest` is also
 supported, but client configurations should pin a tested version when
 reproducibility matters.
 
-The v1.0.1 GitHub Release provides archives for Linux and macOS on `amd64` and
+The v1.0.2 GitHub Release provides archives for Linux and macOS on `amd64` and
 `arm64`, and Windows on `amd64`.
 
 ## Download a release archive
 
 Open the
-[v1.0.1 release](https://github.com/granitebps/threads-mcp/releases/tag/v1.0.1)
+[v1.0.2 release](https://github.com/granitebps/threads-mcp/releases/tag/v1.0.2)
 and download the archive for your computer:
 
 | Operating system | CPU | Archive |
 |---|---|---|
-| macOS | Apple silicon (`arm64`) | `threads-mcp_1.0.1_darwin_arm64.tar.gz` |
-| macOS | Intel (`amd64`) | `threads-mcp_1.0.1_darwin_amd64.tar.gz` |
-| Linux | `arm64` | `threads-mcp_1.0.1_linux_arm64.tar.gz` |
-| Linux | `amd64` | `threads-mcp_1.0.1_linux_amd64.tar.gz` |
-| Windows | `amd64` | `threads-mcp_1.0.1_windows_amd64.zip` |
+| macOS | Apple silicon (`arm64`) | `threads-mcp_1.0.2_darwin_arm64.tar.gz` |
+| macOS | Intel (`amd64`) | `threads-mcp_1.0.2_darwin_amd64.tar.gz` |
+| Linux | `arm64` | `threads-mcp_1.0.2_linux_arm64.tar.gz` |
+| Linux | `amd64` | `threads-mcp_1.0.2_linux_amd64.tar.gz` |
+| Windows | `amd64` | `threads-mcp_1.0.2_windows_amd64.zip` |
 
 The archives also contain the license, README, and third-party notices. The
 release includes a software bill of materials for each archive.
@@ -120,7 +120,7 @@ newer, then authenticate the checksum file against the exact GitHub Actions
 workflow and release tag:
 
 ```bash
-release_tag=v1.0.1
+release_tag=v1.0.2
 cosign verify-blob \
   --bundle checksums.txt.bundle \
   --certificate-identity "https://github.com/granitebps/threads-mcp/.github/workflows/release.yml@refs/tags/$release_tag" \
@@ -131,7 +131,7 @@ cosign verify-blob \
 On macOS, verify the selected archive against that authenticated checksum file:
 
 ```bash
-archive=threads-mcp_1.0.1_darwin_arm64.tar.gz
+archive=threads-mcp_1.0.2_darwin_arm64.tar.gz
 expected=$(awk -v name="$archive" '$2 == name { print $1 }' checksums.txt)
 actual=$(shasum -a 256 "$archive" | awk '{ print $1 }')
 test -n "$expected" && test "$actual" = "$expected"
@@ -144,8 +144,8 @@ commands with the correct Linux archive and replace `shasum -a 256` with
 On Windows PowerShell:
 
 ```powershell
-$releaseTag = "v1.0.1"
-$archive = "threads-mcp_1.0.1_windows_amd64.zip"
+$releaseTag = "v1.0.2"
+$archive = "threads-mcp_1.0.2_windows_amd64.zip"
 cosign verify-blob --bundle checksums.txt.bundle --certificate-identity "https://github.com/granitebps/threads-mcp/.github/workflows/release.yml@refs/tags/$releaseTag" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" checksums.txt
 $expected = Get-Content checksums.txt | Where-Object { $_ -match "  $([regex]::Escape($archive))$" } | ForEach-Object { ($_ -split '\s+')[0] }
 if (-not $expected) { throw "Archive is missing from checksums.txt" }

@@ -56,7 +56,7 @@ Before running checks:
 - Compare tool schemas and error behavior with the [v1 compatibility promise](docs/v1-compatibility.md). Treat an incompatible change as a release blocker unless the approved version and migration plan account for it.
 - Review tracked files and history for secrets or unintended personal information before making the repository public. Do not copy discovered secrets into logs or release notes.
 - Use a clean checkout of the intended commit. Preserve unrelated work; do not reset or discard it to make checks pass.
-- Use the Go version required by `go.mod`, currently Go 1.26.6 or newer. Match the tool versions in the workflows. The current release pins are GoReleaser v2.18.0, Cosign Installer v4.1.2, Cosign v3.1.3, and Syft v1.51.0.
+- Use the Go version required by `go.mod`, currently Go 1.26.9 or newer. Match the tool versions in the workflows. The current release pins are GoReleaser v2.18.0, Cosign Installer v4.1.2, Cosign v3.1.3, and Syft v1.51.0.
 - Review publishing permissions and credentials. The workflows default to read-only repository contents. Only the publishing job has `contents: write` for GitHub Release uploads and `id-token: write` for keyless Cosign signing. It receives the built-in `GITHUB_TOKEN`; Scoop credentials are not passed. External actions use verified commit IDs. See [GitHub's security guidance](https://docs.github.com/en/actions/reference/security/secure-use).
 
 The command examples below use a POSIX shell and start in the repository root.

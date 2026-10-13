@@ -18,7 +18,7 @@ historical pagination, and `get_profile_replies` are outside the v1 scope.
 
 ## Development setup
 
-Install Go 1.26.6 or newer, then work from a clone or fork:
+Install Go 1.26.9 or newer, then work from a clone or fork:
 
 ```bash
 go mod download
