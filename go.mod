@@ -3,7 +3,7 @@ module github.com/granitebps/threads-mcp
 go 1.26.9
 
 require (
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/tamnd/threads-cli v0.1.1
 )
 
